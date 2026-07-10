@@ -1,26 +1,30 @@
 const { v4: uuidv4 } = require('uuid');
 
-/**
- * In-memory orders storage.
- */
-const orders = [];
+let OrderSchema;
+try { OrderSchema = require('../schemas/Order'); } catch (e) { OrderSchema = null; }
 
-/**
- * Order Model
- * Manages order creation and retrieval with UUID-based identifiers.
- */
+function useDB() {
+  const mongoose = require('mongoose');
+  return mongoose.connection.readyState === 1 && OrderSchema;
+}
+
+// In-memory fallback
+const memOrders = [];
+
 const Order = {
-  /**
-   * Create a new order from cart items and customer info.
-   * @param {Array} cartItems - Enriched cart items with product details
-   * @param {Object} totals - { subtotal, deliveryFee, total }
-   * @param {Object} customerInfo - { customerName, email, phone, address }
-   * @returns {Object} The newly created order
-   */
-  createOrder(cartItems, totals, customerInfo) {
-    const order = {
-      id: uuidv4(),
-      items: cartItems,
+  async createOrder(cartItems, totals, customerInfo) {
+    const orderId = uuidv4();
+    const orderData = {
+      orderId,
+      items: cartItems.map((i) => ({
+        productId: i.productId,
+        name: i.product.name,
+        price: i.product.price,
+        quantity: i.quantity,
+        image: i.product.image,
+        unit: i.product.unit,
+        subtotal: i.subtotal,
+      })),
       subtotal: totals.subtotal,
       deliveryFee: totals.deliveryFee,
       total: totals.total,
@@ -31,30 +35,42 @@ const Order = {
         address: customerInfo.address,
       },
       status: 'confirmed',
-      createdAt: new Date().toISOString(),
     };
 
-    orders.push(order);
-    return order;
+    if (useDB()) {
+      const doc = await OrderSchema.create(orderData);
+      const obj = doc.toObject();
+      obj.id = obj.orderId;
+      delete obj._id;
+      delete obj.__v;
+      return obj;
+    }
+
+    orderData.id = orderId;
+    orderData.createdAt = new Date().toISOString();
+    memOrders.push(orderData);
+    return orderData;
   },
 
-  /**
-   * Get all orders, sorted newest first.
-   * @returns {Array} All orders
-   */
-  getOrders() {
-    return [...orders].sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-    );
+  async getOrders() {
+    if (useDB()) {
+      const docs = await OrderSchema.find().sort({ createdAt: -1 }).lean();
+      return docs.map((d) => ({ ...d, id: d.orderId, _id: undefined, __v: undefined }));
+    }
+    return [...memOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   },
 
-  /**
-   * Get a single order by its ID.
-   * @param {string} id - The order UUID
-   * @returns {Object|undefined} The order or undefined
-   */
-  getById(id) {
-    return orders.find((o) => o.id === id);
+  async getById(id) {
+    if (useDB()) {
+      const doc = await OrderSchema.findOne({ orderId: id });
+      if (!doc) return undefined;
+      const obj = doc.toObject();
+      obj.id = obj.orderId;
+      delete obj._id;
+      delete obj.__v;
+      return obj;
+    }
+    return memOrders.find((o) => o.id === id);
   },
 };
 

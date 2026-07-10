@@ -1,143 +1,124 @@
 const Product = require('./Product');
 
+let CartSchema;
+try { CartSchema = require('../schemas/Cart'); } catch (e) { CartSchema = null; }
+
 const DELIVERY_FEE = 49;
 const FREE_DELIVERY_THRESHOLD = 500;
 
-/**
- * In-memory cart storage.
- * Each item: { productId: string, quantity: number }
- */
-let cartItems = [];
+function useDB() {
+  const mongoose = require('mongoose');
+  return mongoose.connection.readyState === 1 && CartSchema;
+}
+
+// In-memory fallback
+let memCart = [];
 
 /**
- * Cart Model
- * Manages an in-memory shopping cart with full product detail enrichment.
+ * Get or create the cart document in MongoDB.
  */
-const Cart = {
-  /**
-   * Get the current cart with full product details and line subtotals.
-   * @returns {Array} Cart items enriched with product data and subtotals
-   */
-  getCart() {
-    return cartItems
-      .map((item) => {
-        const product = Product.getById(item.productId);
-        if (!product) return null;
-        return {
-          productId: item.productId,
-          quantity: item.quantity,
-          product,
-          subtotal: parseFloat((product.price * item.quantity).toFixed(2)),
-        };
-      })
-      .filter(Boolean);
-  },
+async function getCartDoc() {
+  let cart = await CartSchema.findOne({ cartId: 'default' });
+  if (!cart) {
+    cart = await CartSchema.create({ cartId: 'default', items: [] });
+  }
+  return cart;
+}
 
-  /**
-   * Add an item to the cart. If the product already exists, increment quantity.
-   * @param {string} productId - The product ID to add
-   * @param {number} quantity - Quantity to add (default 1)
-   * @returns {Object} The updated cart item
-   */
-  addItem(productId, quantity = 1) {
-    const product = Product.getById(productId);
-    if (!product) {
-      throw new Error(`Product with id '${productId}' not found`);
-    }
-
-    const existing = cartItems.find((item) => item.productId === productId);
-    if (existing) {
-      existing.quantity += quantity;
-      return {
-        productId: existing.productId,
-        quantity: existing.quantity,
+/**
+ * Build enriched cart response with product details.
+ */
+async function buildResponse(items) {
+  const enriched = [];
+  for (const item of items) {
+    const product = await Product.getById(item.productId);
+    if (product) {
+      enriched.push({
+        productId: item.productId,
+        quantity: item.quantity,
         product,
-        subtotal: parseFloat((product.price * existing.quantity).toFixed(2)),
-      };
+        subtotal: parseFloat((product.price * item.quantity).toFixed(2)),
+      });
     }
+  }
+  const subtotal = parseFloat(enriched.reduce((s, i) => s + i.subtotal, 0).toFixed(2));
+  const deliveryFee = subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
+  const total = parseFloat((subtotal + deliveryFee).toFixed(2));
+  return { items: enriched, subtotal, deliveryFee, total };
+}
 
-    const newItem = { productId, quantity };
-    cartItems.push(newItem);
-    return {
-      productId,
-      quantity,
-      product,
-      subtotal: parseFloat((product.price * quantity).toFixed(2)),
-    };
-  },
-
-  /**
-   * Update the quantity of an item in the cart.
-   * If quantity is 0, the item is removed.
-   * @param {string} productId - The product ID to update
-   * @param {number} quantity - The new quantity
-   * @returns {Object|null} The updated cart item, or null if removed
-   */
-  updateItem(productId, quantity) {
-    const index = cartItems.findIndex((item) => item.productId === productId);
-    if (index === -1) {
-      throw new Error(`Item '${productId}' is not in the cart`);
+const Cart = {
+  async getCart() {
+    if (useDB()) {
+      const cart = await getCartDoc();
+      return cart.items.map((i) => ({ productId: i.productId, quantity: i.quantity }));
     }
+    return memCart;
+  },
 
-    if (quantity <= 0) {
-      cartItems.splice(index, 1);
-      return null;
+  async getCartResponse() {
+    const items = await this.getCart();
+    return await buildResponse(items);
+  },
+
+  async addItem(productId, quantity = 1) {
+    if (useDB()) {
+      const cart = await getCartDoc();
+      const existing = cart.items.find((i) => i.productId === productId);
+      if (existing) {
+        existing.quantity += quantity;
+      } else {
+        cart.items.push({ productId, quantity });
+      }
+      await cart.save();
+      return await buildResponse(cart.items);
     }
-
-    cartItems[index].quantity = quantity;
-    const product = Product.getById(productId);
-    return {
-      productId,
-      quantity,
-      product,
-      subtotal: parseFloat((product.price * quantity).toFixed(2)),
-    };
+    const existing = memCart.find((i) => i.productId === productId);
+    if (existing) { existing.quantity += quantity; }
+    else { memCart.push({ productId, quantity }); }
+    return await buildResponse(memCart);
   },
 
-  /**
-   * Remove an item from the cart entirely.
-   * @param {string} productId - The product ID to remove
-   * @returns {boolean} True if the item was removed
-   */
-  removeItem(productId) {
-    const index = cartItems.findIndex((item) => item.productId === productId);
-    if (index === -1) {
-      throw new Error(`Item '${productId}' is not in the cart`);
+  async updateItem(productId, quantity) {
+    if (useDB()) {
+      const cart = await getCartDoc();
+      const item = cart.items.find((i) => i.productId === productId);
+      if (!item) return null;
+      item.quantity = quantity;
+      await cart.save();
+      return await buildResponse(cart.items);
     }
-    cartItems.splice(index, 1);
-    return true;
+    const item = memCart.find((i) => i.productId === productId);
+    if (!item) return null;
+    item.quantity = quantity;
+    return await buildResponse(memCart);
   },
 
-  /**
-   * Clear all items from the cart.
-   */
-  clearCart() {
-    cartItems = [];
+  async removeItem(productId) {
+    if (useDB()) {
+      const cart = await getCartDoc();
+      cart.items = cart.items.filter((i) => i.productId !== productId);
+      await cart.save();
+      return await buildResponse(cart.items);
+    }
+    memCart = memCart.filter((i) => i.productId !== productId);
+    return await buildResponse(memCart);
   },
 
-  /**
-   * Calculate cart totals including conditional delivery fee.
-   * Delivery is free for orders $35 and above.
-   * @returns {Object} { subtotal, deliveryFee, total }
-   */
-  getTotal() {
-    const enrichedItems = this.getCart();
-    const subtotal = parseFloat(
-      enrichedItems.reduce((sum, item) => sum + item.subtotal, 0).toFixed(2)
-    );
-    const deliveryFee =
-      subtotal > 0 && subtotal < FREE_DELIVERY_THRESHOLD ? DELIVERY_FEE : 0;
-    const total = parseFloat((subtotal + deliveryFee).toFixed(2));
-
-    return { subtotal, deliveryFee, total };
+  async clearCart() {
+    if (useDB()) {
+      const cart = await getCartDoc();
+      cart.items = [];
+      await cart.save();
+      return { items: [], subtotal: 0, deliveryFee: 0, total: 0 };
+    }
+    memCart = [];
+    return { items: [], subtotal: 0, deliveryFee: 0, total: 0 };
   },
 
-  /**
-   * Get raw cart items (used internally for order creation).
-   * @returns {Array} Raw cart items array
-   */
-  getRawItems() {
-    return [...cartItems];
+  async getTotal() {
+    const response = await this.getCartResponse();
+    return { subtotal: response.subtotal, deliveryFee: response.deliveryFee, total: response.total };
   },
 };
 

@@ -8,17 +8,17 @@ const Product = require('../models/Product');
  *   ?category=Fruits  — filter by category
  *   ?search=banana    — search by name/description
  */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { category, search } = req.query;
     let data;
 
     if (search) {
-      data = Product.search(search);
+      data = await Product.search(search);
     } else if (category) {
-      data = Product.getByCategory(category);
+      data = await Product.getByCategory(category);
     } else {
-      data = Product.getAll();
+      data = await Product.getAll();
     }
 
     res.json({ success: true, data, count: data.length });
@@ -29,15 +29,12 @@ router.get('/', (req, res) => {
 
 /**
  * GET /api/products/:id
- * Get a single product by ID.
  */
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const product = Product.getById(req.params.id);
+    const product = await Product.getById(req.params.id);
     if (!product) {
-      return res
-        .status(404)
-        .json({ success: false, error: 'Product not found' });
+      return res.status(404).json({ success: false, error: 'Product not found' });
     }
     res.json({ success: true, data: product });
   } catch (err) {
@@ -47,19 +44,14 @@ router.get('/:id', (req, res) => {
 
 /**
  * POST /api/products
- * Create a new product.
- * Body: { name, category, price, unit, image, description, rating }
  */
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, category, price } = req.body;
     if (!name || !category || price === undefined) {
-      return res.status(400).json({
-        success: false,
-        error: 'name, category, and price are required',
-      });
+      return res.status(400).json({ success: false, error: 'name, category, and price are required' });
     }
-    const product = Product.create(req.body);
+    const product = await Product.create(req.body);
     res.status(201).json({ success: true, data: product });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -68,16 +60,12 @@ router.post('/', (req, res) => {
 
 /**
  * PUT /api/products/:id
- * Update an existing product.
- * Body: any product fields to update
  */
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
-    const product = Product.update(req.params.id, req.body);
+    const product = await Product.update(req.params.id, req.body);
     if (!product) {
-      return res
-        .status(404)
-        .json({ success: false, error: 'Product not found' });
+      return res.status(404).json({ success: false, error: 'Product not found' });
     }
     res.json({ success: true, data: product });
   } catch (err) {
@@ -87,15 +75,12 @@ router.put('/:id', (req, res) => {
 
 /**
  * DELETE /api/products/:id
- * Delete a product.
  */
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
-    const deleted = Product.delete(req.params.id);
+    const deleted = await Product.delete(req.params.id);
     if (!deleted) {
-      return res
-        .status(404)
-        .json({ success: false, error: 'Product not found' });
+      return res.status(404).json({ success: false, error: 'Product not found' });
     }
     res.json({ success: true, message: 'Product deleted' });
   } catch (err) {

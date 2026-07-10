@@ -1,17 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const Cart = require('../models/Cart');
-const Product = require('../models/Product');
 
 /**
  * GET /api/cart
- * Returns the current cart with enriched product details and totals.
  */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const items = Cart.getCart();
-    const totals = Cart.getTotal();
-    res.json({ success: true, data: { items, ...totals } });
+    const cart = await Cart.getCartResponse();
+    res.json({ success: true, data: cart });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -19,45 +16,16 @@ router.get('/', (req, res) => {
 
 /**
  * POST /api/cart
- * Add an item to the cart.
- * Body: { productId: string, quantity?: number }
+ * Body: { productId, quantity }
  */
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { productId, quantity } = req.body;
-
     if (!productId) {
-      return res
-        .status(400)
-        .json({ success: false, error: 'productId is required' });
+      return res.status(400).json({ success: false, error: 'productId is required' });
     }
-
-    const product = Product.getById(productId);
-    if (!product) {
-      return res
-        .status(404)
-        .json({ success: false, error: 'Product not found' });
-    }
-
-    const qty = quantity && quantity > 0 ? quantity : 1;
-    const item = Cart.addItem(productId, qty);
-    const totals = Cart.getTotal();
-
-    res.status(201).json({ success: true, data: { item, ...totals } });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-/**
- * DELETE /api/cart/clear
- * Clear the entire cart.
- * (Placed before /:productId so it doesn't get caught by the param route.)
- */
-router.delete('/clear', (req, res) => {
-  try {
-    Cart.clearCart();
-    res.json({ success: true, data: { items: [], subtotal: 0, deliveryFee: 0, total: 0 } });
+    const cart = await Cart.addItem(productId, quantity || 1);
+    res.json({ success: true, data: cart });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -65,44 +33,45 @@ router.delete('/clear', (req, res) => {
 
 /**
  * PUT /api/cart/:productId
- * Update the quantity of an item in the cart.
- * Body: { quantity: number }
+ * Body: { quantity }
  */
-router.put('/:productId', (req, res) => {
+router.put('/:productId', async (req, res) => {
   try {
-    const { productId } = req.params;
     const { quantity } = req.body;
-
-    if (quantity === undefined || quantity === null) {
-      return res
-        .status(400)
-        .json({ success: false, error: 'quantity is required' });
+    if (!quantity || quantity < 1) {
+      return res.status(400).json({ success: false, error: 'Valid quantity is required' });
     }
-
-    const item = Cart.updateItem(productId, quantity);
-    const totals = Cart.getTotal();
-
-    res.json({
-      success: true,
-      data: { item, ...totals },
-      message: item ? 'Item updated' : 'Item removed from cart',
-    });
+    const cart = await Cart.updateItem(req.params.productId, quantity);
+    if (!cart) {
+      return res.status(404).json({ success: false, error: 'Item not found in cart' });
+    }
+    res.json({ success: true, data: cart });
   } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/cart/clear
+ */
+router.delete('/clear', async (req, res) => {
+  try {
+    const cart = await Cart.clearCart();
+    res.json({ success: true, data: cart });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
 /**
  * DELETE /api/cart/:productId
- * Remove a specific item from the cart.
  */
-router.delete('/:productId', (req, res) => {
+router.delete('/:productId', async (req, res) => {
   try {
-    Cart.removeItem(req.params.productId);
-    const totals = Cart.getTotal();
-    res.json({ success: true, data: totals, message: 'Item removed' });
+    const cart = await Cart.removeItem(req.params.productId);
+    res.json({ success: true, data: cart });
   } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

@@ -5,11 +5,10 @@ const Cart = require('../models/Cart');
 
 /**
  * GET /api/orders
- * Returns all orders, sorted newest first.
  */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const orders = Order.getOrders();
+    const orders = await Order.getOrders();
     res.json({ success: true, data: orders, count: orders.length });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -18,15 +17,12 @@ router.get('/', (req, res) => {
 
 /**
  * GET /api/orders/:id
- * Get a single order by ID.
  */
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const order = Order.getById(req.params.id);
+    const order = await Order.getById(req.params.id);
     if (!order) {
-      return res
-        .status(404)
-        .json({ success: false, error: 'Order not found' });
+      return res.status(404).json({ success: false, error: 'Order not found' });
     }
     res.json({ success: true, data: order });
   } catch (err) {
@@ -36,42 +32,32 @@ router.get('/:id', (req, res) => {
 
 /**
  * POST /api/orders
- * Place a new order from the current cart.
  * Body: { customerName, email, phone, address }
  */
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { customerName, email, phone, address } = req.body;
 
-    // Validate required customer fields
     if (!customerName || !email || !phone || !address) {
       return res.status(400).json({
         success: false,
-        error:
-          'All customer fields are required: customerName, email, phone, address',
+        error: 'All customer fields are required: customerName, email, phone, address',
       });
     }
 
-    // Check that the cart is not empty
-    const cartItems = Cart.getCart();
-    if (cartItems.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot place an order with an empty cart',
-      });
+    const cartResponse = await Cart.getCartResponse();
+    if (cartResponse.items.length === 0) {
+      return res.status(400).json({ success: false, error: 'Cannot place an order with an empty cart' });
     }
 
-    const totals = Cart.getTotal();
+    const totals = { subtotal: cartResponse.subtotal, deliveryFee: cartResponse.deliveryFee, total: cartResponse.total };
 
-    const order = Order.createOrder(cartItems, totals, {
-      customerName,
-      email,
-      phone,
-      address,
+    const order = await Order.createOrder(cartResponse.items, totals, {
+      customerName, email, phone, address,
     });
 
     // Clear the cart after order is placed
-    Cart.clearCart();
+    await Cart.clearCart();
 
     res.status(201).json({ success: true, data: order });
   } catch (err) {

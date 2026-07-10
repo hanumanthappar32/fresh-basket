@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const connectDB = require('./config/db');
 
 // Import route handlers
 const productsRouter = require('./routes/products');
@@ -56,8 +57,13 @@ app.get('*', (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Start Server
+// Start Server (connect to DB first if MONGODB_URI is set)
 // ---------------------------------------------------------------------------
-app.listen(PORT, () => {
-  console.log(`🛒 Fresh Basket server running at http://localhost:${PORT}`);
-});
+async function start() {
+  await connectDB();
+  app.listen(PORT, () => {
+    console.log(`🛒 Fresh Basket server running at http://localhost:${PORT}`);
+  });
+}
+
+start();
