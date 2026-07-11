@@ -65,4 +65,27 @@ router.post('/', async (req, res) => {
   }
 });
 
+/**
+ * PATCH /api/orders/:id/status
+ * Body: { status }
+ */
+router.patch('/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!status) {
+      return res.status(400).json({ success: false, error: 'Status is required' });
+    }
+
+    const order = await Order.updateStatus(req.params.id, status);
+    if (!order) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
+
+    res.json({ success: true, data: order });
+  } catch (err) {
+    const code = err.message.includes('Invalid status') ? 400 : 500;
+    res.status(code).json({ success: false, error: err.message });
+  }
+});
+
 module.exports = router;

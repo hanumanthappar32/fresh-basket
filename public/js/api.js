@@ -88,6 +88,13 @@ window.API = (function () {
     return request('/orders');
   }
 
+  function updateOrderStatus(orderId, status) {
+    return request(`/orders/${orderId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  }
+
   /* ── Product Admin ─────────────────────────────── */
   function createProduct(productData) {
     return request('/products', {
@@ -121,6 +128,7 @@ window.API = (function () {
     clearCart,
     placeOrder,
     getOrders,
+    updateOrderStatus,
     createProduct,
     updateProduct,
     deleteProduct,

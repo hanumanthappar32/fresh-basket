@@ -23,6 +23,10 @@ window.AdminPage = {
     content.innerHTML = `
       <div class="admin-page">
         <div class="container">
+          <div class="admin-tabs">
+            <button class="admin-tab active" data-tab="products">🔧 Products</button>
+            <button class="admin-tab" data-tab="orders" onclick="window.navigateTo('#/admin/orders')">📦 Orders</button>
+          </div>
           <div class="admin-header">
             <div>
               <h1 class="admin-title">🔧 Product Manager</h1>

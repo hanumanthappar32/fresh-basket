@@ -72,6 +72,32 @@ const Order = {
     }
     return memOrders.find((o) => o.id === id);
   },
+
+  async updateStatus(id, status) {
+    const validStatuses = ['confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      throw new Error('Invalid status. Must be one of: ' + validStatuses.join(', '));
+    }
+
+    if (useDB()) {
+      const doc = await OrderSchema.findOneAndUpdate(
+        { orderId: id },
+        { status },
+        { new: true }
+      );
+      if (!doc) return undefined;
+      const obj = doc.toObject();
+      obj.id = obj.orderId;
+      delete obj._id;
+      delete obj.__v;
+      return obj;
+    }
+
+    const order = memOrders.find((o) => o.id === id);
+    if (!order) return undefined;
+    order.status = status;
+    return order;
+  },
 };
 
 module.exports = Order;

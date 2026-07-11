@@ -10,6 +10,7 @@
     '/cart': CartPage,
     '/checkout': CheckoutPage,
     '/admin': AdminPage,
+    '/admin/orders': AdminOrdersPage,
   };
 
   /* ── Navigate Helper ───────────────────────────── */
