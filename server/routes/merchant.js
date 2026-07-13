@@ -36,11 +36,17 @@ router.get('/store/:merchantId', async (req, res) => {
  */
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, storeName } = req.body;
+    const { email, password, storeName, razorpayKeyId, razorpayKeySecret } = req.body;
     if (!email || !password || !storeName) {
       return res.status(400).json({ success: false, error: 'Email, password, and store name are required' });
     }
-    const merchant = await Merchant.register({ email, password, storeName });
+    const merchant = await Merchant.register({ 
+      email, 
+      password, 
+      storeName, 
+      razorpayKeyId, 
+      razorpayKeySecret 
+    });
     res.status(201).json({ success: true, data: merchant });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });

@@ -25,7 +25,7 @@ const Merchant = {
   /**
    * Register a new merchant.
    */
-  async register({ email, password, storeName }) {
+  async register({ email, password, storeName, razorpayKeyId, razorpayKeySecret }) {
     // Check if email already exists
     const existing = await this.getByEmail(email);
     if (existing) {
@@ -43,8 +43,8 @@ const Merchant = {
       email,
       password: hashedPassword,
       storeName,
-      razorpayKeyId: '',
-      razorpayKeySecret: '',
+      razorpayKeyId: razorpayKeyId || '',
+      razorpayKeySecret: razorpayKeySecret || '',
       codEnabled: true,
     };
 

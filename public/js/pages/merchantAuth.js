@@ -62,17 +62,31 @@ window.MerchantAuthPage = {
     return `
       <form id="merchant-register-form">
         <div class="form-group" style="margin-bottom: 16px; text-align: left;">
-          <label for="reg-store-name">Store Name</label>
+          <label for="reg-store-name">Store Name *</label>
           <input type="text" id="reg-store-name" placeholder="e.g. Organic Greens" required style="width:100%; padding:14px; background:var(--bg-glass); border:1px solid var(--border); border-radius:var(--radius-md); color:var(--text-primary); outline:none;">
         </div>
         <div class="form-group" style="margin-bottom: 16px; text-align: left;">
-          <label for="reg-email">Email Address</label>
+          <label for="reg-email">Email Address *</label>
           <input type="email" id="reg-email" placeholder="name@store.com" required style="width:100%; padding:14px; background:var(--bg-glass); border:1px solid var(--border); border-radius:var(--radius-md); color:var(--text-primary); outline:none;">
         </div>
-        <div class="form-group" style="margin-bottom: 24px; text-align: left;">
-          <label for="reg-password">Password</label>
+        <div class="form-group" style="margin-bottom: 16px; text-align: left;">
+          <label for="reg-password">Password *</label>
           <input type="password" id="reg-password" placeholder="••••••••" required style="width:100%; padding:14px; background:var(--bg-glass); border:1px solid var(--border); border-radius:var(--radius-md); color:var(--text-primary); outline:none;">
         </div>
+        
+        <div style="border-top:1px solid var(--border); margin:20px 0; padding-top:20px;">
+          <h4 style="margin-bottom:12px; text-align:left; color:var(--text-primary);">💳 Razorpay Key Setup (Optional)</h4>
+          
+          <div class="form-group" style="margin-bottom: 16px; text-align: left;">
+            <label for="reg-key-id">Razorpay Key ID</label>
+            <input type="text" id="reg-key-id" placeholder="rzp_test_..." style="width:100%; padding:14px; background:var(--bg-glass); border:1px solid var(--border); border-radius:var(--radius-md); color:var(--text-primary); outline:none;">
+          </div>
+          <div class="form-group" style="margin-bottom: 24px; text-align: left;">
+            <label for="reg-key-secret">Razorpay Key Secret</label>
+            <input type="password" id="reg-key-secret" placeholder="Enter secret key" style="width:100%; padding:14px; background:var(--bg-glass); border:1px solid var(--border); border-radius:var(--radius-md); color:var(--text-primary); outline:none;">
+          </div>
+        </div>
+
         <button type="submit" class="btn btn-primary" id="register-submit-btn" style="width: 100%;">Create Store Account</button>
       </form>
     `;
@@ -136,9 +150,17 @@ window.MerchantAuthPage = {
         const storeName = document.getElementById('reg-store-name').value.trim();
         const email = document.getElementById('reg-email').value.trim();
         const password = document.getElementById('reg-password').value;
+        const razorpayKeyId = document.getElementById('reg-key-id').value.trim();
+        const razorpayKeySecret = document.getElementById('reg-key-secret').value.trim();
 
         try {
-          const res = await API.registerMerchant({ storeName, email, password });
+          const res = await API.registerMerchant({ 
+            storeName, 
+            email, 
+            password,
+            razorpayKeyId,
+            razorpayKeySecret
+          });
           
           // Log in immediately on successful registration
           const loginRes = await API.loginMerchant({ email, password });
