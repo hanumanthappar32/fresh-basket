@@ -29,12 +29,7 @@ window.CheckoutPage = {
       const total = subtotal + delivery;
 
       // Extract storeId from the active cart items if global currentStoreId is reset
-      const storeId = window.currentStoreId || (items[0] && items[0].product && items[0].product.merchantId);
-      if (!storeId) {
-        Toast.show('Store information is missing. Redirecting home...', 'error');
-        window.navigateTo('#/');
-        return;
-      }
+      const storeId = window.currentStoreId || (items[0] && items[0].product && items[0].product.merchantId) || 'default-merchant';
       window.currentStoreId = storeId;
 
       // Get payment gateway configuration

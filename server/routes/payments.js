@@ -12,10 +12,7 @@ const Cart = require('../models/Cart');
  */
 router.get('/config', async (req, res) => {
   try {
-    const { storeId } = req.query;
-    if (!storeId) {
-      return res.status(400).json({ success: false, error: 'Store ID is required' });
-    }
+    const storeId = req.query.storeId || 'default-merchant';
     const settings = await Merchant.getRawSettings(storeId);
     const razorpayEnabled = !!(settings.razorpayKeyId && settings.razorpayKeySecret);
     res.json({
@@ -37,10 +34,7 @@ router.get('/config', async (req, res) => {
  */
 router.post('/create-order', async (req, res) => {
   try {
-    const { storeId } = req.query;
-    if (!storeId) {
-      return res.status(400).json({ success: false, error: 'Store ID is required' });
-    }
+    const storeId = req.query.storeId || 'default-merchant';
     const settings = await Merchant.getRawSettings(storeId);
     if (!settings.razorpayKeyId || !settings.razorpayKeySecret) {
       return res.status(400).json({ success: false, error: 'Razorpay is not configured for this store.' });
@@ -93,9 +87,7 @@ router.post('/verify', async (req, res) => {
       storeId,
     } = req.body;
 
-    if (!storeId) {
-      return res.status(400).json({ success: false, error: 'Store ID is required' });
-    }
+    const actualStoreId = storeId || 'default-merchant';
 
     // Validate Razorpay fields
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -111,7 +103,7 @@ router.post('/verify', async (req, res) => {
     }
 
     // Get secret for verification
-    const settings = await Merchant.getRawSettings(storeId);
+    const settings = await Merchant.getRawSettings(actualStoreId);
     if (!settings.razorpayKeySecret) {
       return res.status(400).json({ success: false, error: 'Razorpay is not configured for this store' });
     }
@@ -145,7 +137,7 @@ router.post('/verify', async (req, res) => {
       paymentMethod: 'razorpay',
       paymentId: razorpay_payment_id,
       razorpayOrderId: razorpay_order_id,
-      merchantId: storeId,
+      merchantId: actualStoreId,
     });
 
     // Clear the cart
