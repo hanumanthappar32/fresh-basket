@@ -61,9 +61,31 @@ window.CheckoutPage = {
           </div>
         `;
       } else if (razorpayEnabled && !codEnabled) {
-        paymentMethodsHtml = `<input type="hidden" name="payment-method" value="razorpay">`;
+        paymentMethodsHtml = `
+          <div class="payment-methods-section" style="margin-bottom: 24px; border-top: 1px solid var(--border); padding-top: 24px;">
+            <h3 style="margin-bottom: 12px;">Payment Method</h3>
+            <div class="payment-method-card active" style="padding: 16px; border: 1px solid var(--primary); border-radius: var(--radius-md); background: rgba(52, 211, 153, 0.05); display: flex; align-items: center; gap: 12px; max-width: 320px;">
+              <input type="radio" name="payment-method" value="razorpay" checked style="accent-color: var(--primary);">
+              <div>
+                <div style="font-weight: 600;">💳 Pay Online</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">Secure payment via Razorpay</div>
+              </div>
+            </div>
+          </div>
+        `;
       } else {
-        paymentMethodsHtml = `<input type="hidden" name="payment-method" value="cod">`;
+        paymentMethodsHtml = `
+          <div class="payment-methods-section" style="margin-bottom: 24px; border-top: 1px solid var(--border); padding-top: 24px;">
+            <h3 style="margin-bottom: 12px;">Payment Method</h3>
+            <div class="payment-method-card active" style="padding: 16px; border: 1px solid var(--primary); border-radius: var(--radius-md); background: rgba(52, 211, 153, 0.05); display: flex; align-items: center; gap: 12px; max-width: 320px;">
+              <input type="radio" name="payment-method" value="cod" checked style="accent-color: var(--primary);">
+              <div>
+                <div style="font-weight: 600;">🏠 Cash on Delivery</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">Pay in cash or UPI upon delivery</div>
+              </div>
+            </div>
+          </div>
+        `;
       }
 
       content.innerHTML = `
