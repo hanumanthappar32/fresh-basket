@@ -16,10 +16,22 @@ window.Header = {
     if (merchantId) {
       portalLinkHtml = `
         <a href="#/merchant/dashboard" class="nav-link" data-route="/merchant/dashboard">
-          <span class="nav-icon">⚙️</span>
-          <span>${storeName}</span>
+          <span class="nav-icon">🔧</span>
+          <span>Products</span>
         </a>
-        <a href="javascript:void(0)" class="nav-link" id="merchant-logout-btn">
+        <a href="#/merchant/orders" class="nav-link" data-route="/merchant/orders">
+          <span class="nav-icon">📦</span>
+          <span>Orders</span>
+        </a>
+        <a href="#/merchant/settings" class="nav-link" data-route="/merchant/settings">
+          <span class="nav-icon">⚙️</span>
+          <span>Settings</span>
+        </a>
+        <span class="nav-divider" style="width: 1px; height: 16px; background: var(--border); margin: 0 8px;"></span>
+        <span style="color: var(--text-secondary); font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 4px;">
+          🏪 ${storeName}
+        </span>
+        <a href="javascript:void(0)" class="nav-link" id="merchant-logout-btn" style="color: hsl(0, 85%, 65%);">
           <span class="nav-icon">🚪</span>
           <span>Logout</span>
         </a>
@@ -60,40 +72,21 @@ window.Header = {
   },
 
   /**
-   * Bind logout click listener.
-   */
-  _bindLogout(header) {
-    // Prevent duplicate handlers
-    if (header._logoutBound) return;
-    header._logoutBound = true;
-
-    header.addEventListener('click', (e) => {
-      const logoutBtn = e.target.closest('#merchant-logout-btn');
-      if (logoutBtn) {
-        e.preventDefault();
-        localStorage.removeItem('merchantId');
-        localStorage.removeItem('storeName');
-        Toast.show('Logged out successfully', 'info');
-        window.navigateTo('#/');
-        // Force full header re-render
-        header._logoutBound = false;
-        this.render();
-      }
-    });
-  },
-
-  /**
-   * Highlight the active nav link based on the current hash.
+   * Update active class on links matching current route.
    */
   _highlightActive() {
     const hash = window.location.hash || '#/';
-    const route = hash.replace('#', '') || '/';
-    const links = document.querySelectorAll('.nav-link');
+    let path = hash.replace('#', '') || '/';
+
+    // Highlight parent tabs for merchant sub-paths
+    if (path.startsWith('/store')) {
+      path = '/';
+    }
+
+    const links = document.querySelectorAll('.header-nav .nav-link');
     links.forEach((link) => {
-      const linkRoute = link.getAttribute('data-route');
-      if (route === linkRoute || (route.startsWith(linkRoute) && linkRoute !== '/')) {
-        link.classList.add('active');
-      } else if (linkRoute === '/' && route === '/') {
+      const route = link.dataset.route;
+      if (route === path) {
         link.classList.add('active');
       } else {
         link.classList.remove('active');
@@ -102,18 +95,42 @@ window.Header = {
   },
 
   /**
-   * Fetch cart and update badge count.
+   * Fetch latest cart count and update badge.
    */
   async updateCartCount() {
+    const badge = document.getElementById('cart-badge');
+    if (!badge) return;
+
     try {
       const cart = await API.getCart();
-      const badge = document.getElementById('cart-badge');
-      if (!badge) return;
-      const count = cart.items ? cart.items.reduce((sum, i) => sum + i.quantity, 0) : 0;
-      badge.textContent = count;
-      badge.style.display = count > 0 ? 'flex' : 'none';
+      const items = cart.items || [];
+      const total = items.reduce((sum, item) => sum + item.quantity, 0);
+
+      if (total > 0) {
+        badge.textContent = total;
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
     } catch (e) {
-      // Silently fail — cart may not exist yet
+      badge.style.display = 'none';
+    }
+  },
+
+  /**
+   * Bind logout event click listener.
+   */
+  _bindLogout(header) {
+    const logoutBtn = header.querySelector('#merchant-logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        localStorage.removeItem('merchantId');
+        localStorage.removeItem('storeName');
+        Toast.show('Logged out successfully', 'info');
+        this.render(); // Re-render header menu
+        window.navigateTo('#/'); // Redirect home
+      });
     }
   },
 };
