@@ -23,37 +23,37 @@ window.StorePage = {
     content.innerHTML = '<div class="loading-spinner"></div>';
 
     try {
-      // Load store/merchant details
       this._storeInfo = await API.getStore(storeId);
 
       content.innerHTML = `
-        <section class="hero" style="background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(16, 185, 129, 0.05) 100%); border-bottom: 1px solid var(--border);">
-          <div class="container" style="text-align: center; padding: 60px 20px;">
-            <div style="font-size: 3rem; margin-bottom: 16px;">🏪</div>
-            <h1 class="hero-title" style="font-size: 2.5rem; margin-bottom: 8px;">${this._storeInfo.storeName}</h1>
-            <p class="hero-subtitle" style="max-width: 600px; margin: 0 auto 24px;">Welcome to our store! Shop fresh fruits, vegetables, bakery and more.</p>
-            <div class="search-bar" style="margin: 0 auto; max-width: 500px;">
-              <span class="search-icon">🔍</span>
-              <input type="text" id="search-input" placeholder="Search in this store..." autocomplete="off">
-              <button type="button" id="search-btn">Search</button>
+        <div id="store-page-wrapper">
+          <section class="hero" style="background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(16, 185, 129, 0.05) 100%); border-bottom: 1px solid var(--border);">
+            <div class="container" style="text-align: center; padding: 60px 20px;">
+              <div style="font-size: 3rem; margin-bottom: 16px;">🏪</div>
+              <h1 class="hero-title" style="font-size: 2.5rem; margin-bottom: 8px;">${this._storeInfo.storeName}</h1>
+              <p class="hero-subtitle" style="max-width: 600px; margin: 0 auto 24px;">Welcome to our store! Shop fresh fruits, vegetables, bakery and more.</p>
+              <div class="search-bar" style="margin: 0 auto; max-width: 500px;">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" placeholder="Search in this store..." autocomplete="off">
+                <button type="button" id="search-btn">Search</button>
+              </div>
+              <button class="btn btn-secondary" onclick="window.navigateTo('#/')" style="margin-top: 24px; padding: 8px 16px; font-size: 0.85rem;">← Back to Stores</button>
             </div>
-            <button class="btn btn-secondary" onclick="window.navigateTo('#/')" style="margin-top: 24px; padding: 8px 16px; font-size: 0.85rem;">← Back to Stores</button>
-          </div>
-        </section>
-        <section class="container" style="padding-top: 40px;">
-          <div class="category-tabs" id="category-tabs">
-            <button class="category-tab active" data-category="All">🛒 All</button>
-          </div>
-          <div class="product-grid" id="product-grid">
-            <div class="loading-spinner"></div>
-          </div>
-        </section>
+          </section>
+          <section class="container" style="padding-top: 40px;">
+            <div class="category-tabs" id="category-tabs">
+              <button class="category-tab active" data-category="All">🛒 All</button>
+            </div>
+            <div class="product-grid" id="product-grid">
+              <div class="loading-spinner"></div>
+            </div>
+          </section>
+        </div>
       `;
 
-      // Load categories and products
       await this._loadCategories();
       await this._loadProducts();
-      this._bindEvents(content);
+      this._bindEvents();
     } catch (err) {
       console.error(err);
       content.innerHTML = `
@@ -105,8 +105,6 @@ window.StorePage = {
     try {
       const category = this._currentCategory !== 'All' ? this._currentCategory : undefined;
       const search = this._searchQuery || undefined;
-      
-      // Pass storeId (currentStoreId)
       const products = await API.getProducts(category, search, window.currentStoreId);
 
       if (!products || products.length === 0) {
@@ -136,8 +134,11 @@ window.StorePage = {
   /**
    * Bind event handlers.
    */
-  _bindEvents(content) {
-    content.addEventListener('click', async (e) => {
+  _bindEvents() {
+    const wrapper = document.getElementById('store-page-wrapper');
+    if (!wrapper) return;
+
+    wrapper.addEventListener('click', async (e) => {
       // Category tabs
       const tab = e.target.closest('.category-tab');
       if (tab) {
@@ -186,7 +187,7 @@ window.StorePage = {
     });
 
     // Search input with debounce
-    content.addEventListener('input', (e) => {
+    wrapper.addEventListener('input', (e) => {
       if (e.target.id === 'search-input') {
         clearTimeout(this._debounceTimer);
         this._debounceTimer = setTimeout(() => {
@@ -197,7 +198,7 @@ window.StorePage = {
     });
 
     // Search button click
-    content.addEventListener('click', (e) => {
+    wrapper.addEventListener('click', (e) => {
       if (e.target.id === 'search-btn' || e.target.closest('#search-btn')) {
         const input = document.getElementById('search-input');
         if (input) {
@@ -208,7 +209,7 @@ window.StorePage = {
     });
 
     // Enter key in search
-    content.addEventListener('keydown', (e) => {
+    wrapper.addEventListener('keydown', (e) => {
       if (e.target.id === 'search-input' && e.key === 'Enter') {
         clearTimeout(this._debounceTimer);
         this._searchQuery = e.target.value.trim();

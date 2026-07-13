@@ -10,7 +10,7 @@ window.CartPage = {
     if (!content) return;
 
     content.innerHTML = `
-      <div class="cart-page">
+      <div class="cart-page" id="cart-page-wrapper">
         <div class="container">
           <h1 class="cart-page-title">Your Cart</h1>
           <p class="cart-page-count" id="cart-count"></p>
@@ -22,7 +22,7 @@ window.CartPage = {
     `;
 
     await this._loadCart();
-    this._bindEvents(content);
+    this._bindEvents();
   },
 
   /**
@@ -59,11 +59,15 @@ window.CartPage = {
 
       body.innerHTML = `
         <div class="cart-layout">
-          <div class="cart-items-section">
+          <div class="cart-items">
             ${items.map((item) => CartItem.render(item)).join('')}
+            <div class="cart-actions-row">
+              <button class="btn btn-secondary" id="clear-cart-btn">Clear Cart</button>
+              <button class="btn btn-secondary" id="continue-shopping-btn">Continue Shopping</button>
+            </div>
           </div>
           <div class="cart-summary">
-            <h3>Order Summary</h3>
+            <h3>Summary</h3>
             <div class="summary-row">
               <span class="label">Subtotal</span>
               <span class="value">₹${subtotal.toFixed(2)}</span>
@@ -72,37 +76,31 @@ window.CartPage = {
               <span class="label">Delivery</span>
               <span class="value">${delivery === 0 ? 'FREE' : '₹' + delivery.toFixed(2)}</span>
             </div>
-            ${delivery > 0 ? `<p style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Free delivery on orders over ₹500</p>` : ''}
             <div class="summary-divider"></div>
             <div class="summary-row total">
               <span class="label">Total</span>
               <span class="value">₹${total.toFixed(2)}</span>
             </div>
-            <button class="btn btn-primary" id="checkout-btn">Proceed to Checkout</button>
-            <div class="cart-actions">
-              <button class="btn btn-secondary" id="continue-shopping-btn">Continue Shopping</button>
-              <button class="btn btn-danger" id="clear-cart-btn">Clear Cart</button>
-            </div>
+            <button class="btn btn-primary checkout-btn" id="checkout-btn" style="width:100%;margin-top:20px;">
+              Proceed to Checkout
+            </button>
           </div>
         </div>
       `;
     } catch (e) {
       console.error('Failed to load cart:', e);
-      body.innerHTML = `
-        <div class="empty-cart">
-          <div class="empty-cart-icon">⚠️</div>
-          <h2>Could not load cart</h2>
-          <p>Please try again later.</p>
-        </div>
-      `;
+      body.innerHTML = '<p style="color:var(--danger);text-align:center;padding:40px;">Failed to load cart.</p>';
     }
   },
 
   /**
-   * Bind event delegation.
+   * Bind event delegation on the local wrapper.
    */
-  _bindEvents(content) {
-    content.addEventListener('click', async (e) => {
+  _bindEvents() {
+    const wrapper = document.getElementById('cart-page-wrapper');
+    if (!wrapper) return;
+
+    wrapper.addEventListener('click', async (e) => {
       // Quantity minus
       const minus = e.target.closest('.cart-qty-minus');
       if (minus) {
@@ -175,7 +173,12 @@ window.CartPage = {
 
       // Continue Shopping
       if (e.target.id === 'continue-shopping-btn' || e.target.closest('#continue-shopping-btn')) {
-        window.navigateTo('#/');
+        // Direct back to the active store if shopping
+        if (window.currentStoreId) {
+          window.navigateTo(`#/store?id=${window.currentStoreId}`);
+        } else {
+          window.navigateTo('#/');
+        }
         return;
       }
     });
