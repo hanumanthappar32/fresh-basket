@@ -54,7 +54,7 @@ router.post('/', async (req, res) => {
 
     const order = await Order.createOrder(cartResponse.items, totals, {
       customerName, email, phone, address,
-    });
+    }, { paymentMethod: 'cod' });
 
     // Clear the cart after order is placed
     await Cart.clearCart();

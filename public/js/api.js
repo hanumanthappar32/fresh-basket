@@ -95,6 +95,35 @@ window.API = (function () {
     });
   }
 
+  /* ── Payments & Settings ────────────────────────── */
+  function getPaymentConfig() {
+    return request('/payments/config');
+  }
+
+  function createPaymentOrder() {
+    return request('/payments/create-order', {
+      method: 'POST',
+    });
+  }
+
+  function verifyPayment(verificationData) {
+    return request('/payments/verify', {
+      method: 'POST',
+      body: JSON.stringify(verificationData),
+    });
+  }
+
+  function getAdminSettings() {
+    return request('/admin/settings');
+  }
+
+  function updateAdminSettings(settingsData) {
+    return request('/admin/settings', {
+      method: 'POST',
+      body: JSON.stringify(settingsData),
+    });
+  }
+
   /* ── Product Admin ─────────────────────────────── */
   function createProduct(productData) {
     return request('/products', {
@@ -129,6 +158,11 @@ window.API = (function () {
     placeOrder,
     getOrders,
     updateOrderStatus,
+    getPaymentConfig,
+    createPaymentOrder,
+    verifyPayment,
+    getAdminSettings,
+    updateAdminSettings,
     createProduct,
     updateProduct,
     deleteProduct,

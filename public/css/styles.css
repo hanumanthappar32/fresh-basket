@@ -2209,3 +2209,27 @@ footer p {
   }
 }
 
+/* ── Checkout Payment Method Selector Styles ─────────────────────────── */
+.payment-method-card {
+  transition: var(--transition);
+  position: relative;
+}
+
+.payment-method-card:hover {
+  border-color: var(--border-hover) !important;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.payment-method-card.active {
+  border-color: var(--primary) !important;
+  background: rgba(52, 211, 153, 0.05) !important;
+  box-shadow: 0 0 0 2px hsla(145, 63%, 42%, 0.1);
+}
+
+.payment-method-card input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+

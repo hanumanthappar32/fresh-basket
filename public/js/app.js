@@ -11,6 +11,7 @@
     '/checkout': CheckoutPage,
     '/admin': AdminPage,
     '/admin/orders': AdminOrdersPage,
+    '/admin/settings': AdminSettingsPage,
   };
 
   /* ── Navigate Helper ───────────────────────────── */

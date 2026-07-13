@@ -24,6 +24,7 @@ window.AdminOrdersPage = {
           <div class="admin-tabs">
             <button class="admin-tab" data-tab="products" onclick="window.navigateTo('#/admin')">🔧 Products</button>
             <button class="admin-tab active" data-tab="orders">📦 Orders</button>
+            <button class="admin-tab" data-tab="settings" onclick="window.navigateTo('#/admin/settings')">⚙️ Settings</button>
           </div>
           <div class="admin-header">
             <div>
@@ -167,6 +168,11 @@ window.AdminOrdersPage = {
       .map((st) => `<option value="${st}" ${order.status === st ? 'selected' : ''}>${statusConfig[st].icon} ${statusConfig[st].label}</option>`)
       .join('');
 
+    const isRazorpay = order.paymentMethod === 'razorpay';
+    const payBadge = isRazorpay
+      ? `<span class="order-payment-badge razorpay" style="background:hsla(210, 80%, 55%, 0.15);color:hsl(210, 80%, 65%);border:1px solid hsla(210, 80%, 55%, 0.3);padding:6px 14px;border-radius:var(--radius-full);font-size:0.8rem;font-weight:600;margin-right:8px;">💳 Razorpay</span>`
+      : `<span class="order-payment-badge cod" style="background:hsla(35, 95%, 55%, 0.15);color:hsl(35, 95%, 65%);border:1px solid hsla(35, 95%, 55%, 0.3);padding:6px 14px;border-radius:var(--radius-full);font-size:0.8rem;font-weight:600;margin-right:8px;">🏠 COD</span>`;
+
     return `
       <div class="order-card" data-order-id="${order.orderId || order.id}">
         <div class="order-card-header">
@@ -175,7 +181,8 @@ window.AdminOrdersPage = {
             <span class="order-id-value">#${orderId}</span>
             <span class="order-date">${dateStr} • ${timeStr}</span>
           </div>
-          <div class="order-status-section">
+          <div class="order-status-section" style="display:flex;align-items:center;">
+            ${payBadge}
             <span class="order-status-badge" style="background:${s.color}20;color:${s.color};border:1px solid ${s.color}40;">
               ${s.icon} ${s.label}
             </span>

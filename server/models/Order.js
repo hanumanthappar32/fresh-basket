@@ -12,7 +12,7 @@ function useDB() {
 const memOrders = [];
 
 const Order = {
-  async createOrder(cartItems, totals, customerInfo) {
+  async createOrder(cartItems, totals, customerInfo, paymentInfo = {}) {
     const orderId = uuidv4();
     const orderData = {
       orderId,
@@ -35,6 +35,9 @@ const Order = {
         address: customerInfo.address,
       },
       status: 'confirmed',
+      paymentMethod: paymentInfo.paymentMethod || 'cod',
+      paymentId: paymentInfo.paymentId || '',
+      razorpayOrderId: paymentInfo.razorpayOrderId || '',
     };
 
     if (useDB()) {

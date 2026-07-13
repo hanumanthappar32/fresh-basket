@@ -26,6 +26,7 @@ window.AdminPage = {
           <div class="admin-tabs">
             <button class="admin-tab active" data-tab="products">🔧 Products</button>
             <button class="admin-tab" data-tab="orders" onclick="window.navigateTo('#/admin/orders')">📦 Orders</button>
+            <button class="admin-tab" data-tab="settings" onclick="window.navigateTo('#/admin/settings')">⚙️ Settings</button>
           </div>
           <div class="admin-header">
             <div>

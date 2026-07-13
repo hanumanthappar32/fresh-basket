@@ -8,6 +8,8 @@ const productsRouter = require('./routes/products');
 const categoriesRouter = require('./routes/categories');
 const cartRouter = require('./routes/cart');
 const ordersRouter = require('./routes/orders');
+const settingsRouter = require('./routes/settings');
+const paymentsRouter = require('./routes/payments');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,6 +30,8 @@ app.use('/api/products', productsRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/orders', ordersRouter);
+app.use('/api/admin/settings', settingsRouter);
+app.use('/api/payments', paymentsRouter);
 
 // ---------------------------------------------------------------------------
 // Admin Auth (password from environment variable)

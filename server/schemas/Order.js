@@ -23,6 +23,9 @@ const orderSchema = new mongoose.Schema({
     address: String,
   },
   status: { type: String, default: 'confirmed' },
+  paymentMethod: { type: String, default: 'cod' },
+  paymentId: String,
+  razorpayOrderId: String,
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

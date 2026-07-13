@@ -28,6 +28,40 @@ window.CheckoutPage = {
       const delivery = subtotal >= 500 ? 0 : 49;
       const total = subtotal + delivery;
 
+      // Get payment gateway configuration
+      const config = await API.getPaymentConfig();
+      const razorpayEnabled = config.razorpayEnabled;
+      const codEnabled = config.codEnabled !== false;
+
+      let paymentMethodsHtml = '';
+      if (razorpayEnabled && codEnabled) {
+        paymentMethodsHtml = `
+          <div class="payment-methods-section" style="margin-bottom: 24px; border-top: 1px solid var(--border); padding-top: 24px;">
+            <h3 style="margin-bottom: 12px;">Payment Method</h3>
+            <div class="payment-methods-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+              <label class="payment-method-card active" style="padding: 16px; border: 1px solid var(--primary); border-radius: var(--radius-md); background: rgba(52, 211, 153, 0.05); display: flex; align-items: center; gap: 12px; cursor: pointer;" id="pm-card-razorpay">
+                <input type="radio" name="payment-method" value="razorpay" checked style="accent-color: var(--primary); cursor: pointer;">
+                <div>
+                  <div style="font-weight: 600;">💳 Pay Online</div>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary);">Secure payment via Razorpay</div>
+                </div>
+              </label>
+              <label class="payment-method-card" style="padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-md); display: flex; align-items: center; gap: 12px; cursor: pointer;" id="pm-card-cod">
+                <input type="radio" name="payment-method" value="cod" style="accent-color: var(--primary); cursor: pointer;">
+                <div>
+                  <div style="font-weight: 600;">🏠 Pay on Delivery</div>
+                  <div style="font-size: 0.8rem; color: var(--text-secondary);">Cash or UPI on delivery</div>
+                </div>
+              </label>
+            </div>
+          </div>
+        `;
+      } else if (razorpayEnabled && !codEnabled) {
+        paymentMethodsHtml = `<input type="hidden" name="payment-method" value="razorpay">`;
+      } else {
+        paymentMethodsHtml = `<input type="hidden" name="payment-method" value="cod">`;
+      }
+
       content.innerHTML = `
         <div class="checkout-page">
           <div class="container">
@@ -48,14 +82,17 @@ window.CheckoutPage = {
                   </div>
                   <div class="form-group" id="fg-phone">
                     <label for="customer-phone">Phone Number</label>
-                    <input type="tel" id="customer-phone" placeholder="+1 (555) 123-4567" required>
+                    <input type="tel" id="customer-phone" placeholder="9876543210" required>
                     <span class="error-message">Please enter your phone number</span>
                   </div>
                   <div class="form-group" id="fg-address">
                     <label for="customer-address">Delivery Address</label>
-                    <textarea id="customer-address" placeholder="123 Main St, Apt 4B, New York, NY 10001" required></textarea>
+                    <textarea id="customer-address" placeholder="123 Main St, Apt 4B, Mumbai, MH 400001" required></textarea>
                     <span class="error-message">Please enter your delivery address</span>
                   </div>
+                  
+                  ${paymentMethodsHtml}
+
                   <button type="submit" class="btn btn-primary" id="place-order-btn">
                     Place Order — ₹${total.toFixed(2)}
                   </button>
@@ -108,6 +145,50 @@ window.CheckoutPage = {
     const form = document.getElementById('checkout-form');
     if (!form) return;
 
+    const rzRadio = document.querySelector('input[name="payment-method"][value="razorpay"]');
+    const codRadio = document.querySelector('input[name="payment-method"][value="cod"]');
+    const btn = document.getElementById('place-order-btn');
+
+    function updateButtonText() {
+      if (!btn) return;
+      if (rzRadio && rzRadio.checked) {
+        btn.textContent = `Pay & Place Order — ₹${total.toFixed(2)}`;
+      } else if (codRadio && codRadio.checked) {
+        btn.textContent = `Place Order (COD) — ₹${total.toFixed(2)}`;
+      } else {
+        const pmHidden = document.querySelector('input[name="payment-method"]');
+        if (pmHidden && pmHidden.value === 'razorpay') {
+          btn.textContent = `Pay & Place Order — ₹${total.toFixed(2)}`;
+        } else {
+          btn.textContent = `Place Order — ₹${total.toFixed(2)}`;
+        }
+      }
+    }
+
+    // Initialize button text
+    updateButtonText();
+
+    // Toggle active state for payment method cards
+    const pmCards = document.querySelectorAll('.payment-method-card');
+    pmCards.forEach(card => {
+      card.addEventListener('click', () => {
+        pmCards.forEach(c => {
+          c.classList.remove('active');
+          c.style.borderColor = 'var(--border)';
+          c.style.background = 'none';
+        });
+        card.classList.add('active');
+        card.style.borderColor = 'var(--primary)';
+        card.style.background = 'rgba(52, 211, 153, 0.05)';
+        
+        const radio = card.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+          updateButtonText();
+        }
+      });
+    });
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -136,7 +217,7 @@ window.CheckoutPage = {
         valid = false;
       }
 
-      if (!phone || phone.length < 7) {
+      if (!phone || phone.length < 10) {
         document.getElementById('fg-phone').classList.add('has-error');
         valid = false;
       }
@@ -151,18 +232,85 @@ window.CheckoutPage = {
         return;
       }
 
-      // Submit
-      const btn = document.getElementById('place-order-btn');
+      // Determine payment method
+      let paymentMethod = 'cod';
+      if (rzRadio && rzRadio.checked) {
+        paymentMethod = 'razorpay';
+      } else {
+        const pmHidden = document.querySelector('input[name="payment-method"]');
+        if (pmHidden) {
+          paymentMethod = pmHidden.value;
+        }
+      }
+
+      // Submit flow
       btn.classList.add('btn-loading');
       btn.disabled = true;
 
-      try {
-        const order = await API.placeOrder({ customerName: name, email, phone, address });
-        this._showConfirmation(order, total);
-      } catch (err) {
-        Toast.show('Failed to place order. Please try again.', 'error');
-        btn.classList.remove('btn-loading');
-        btn.disabled = false;
+      if (paymentMethod === 'razorpay') {
+        try {
+          const payOrder = await API.createPaymentOrder();
+          
+          const options = {
+            key: payOrder.keyId,
+            amount: payOrder.amount,
+            currency: payOrder.currency,
+            name: "Fresh Basket",
+            description: "Grocery Order Payment",
+            order_id: payOrder.razorpayOrderId,
+            handler: async (response) => {
+              try {
+                const order = await API.verifyPayment({
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  customerName: name,
+                  email: email,
+                  phone: phone,
+                  address: address
+                });
+                this._showConfirmation(order, total);
+              } catch (err) {
+                console.error(err);
+                Toast.show('Payment verification failed. Please contact support.', 'error');
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+              }
+            },
+            prefill: {
+              name: name,
+              email: email,
+              contact: phone
+            },
+            theme: {
+              color: "#10b981"
+            },
+            modal: {
+              ondismiss: () => {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+              }
+            }
+          };
+          
+          const rzp = new Razorpay(options);
+          rzp.open();
+        } catch (err) {
+          console.error(err);
+          Toast.show(err.message || 'Failed to initiate payment. Please try again.', 'error');
+          btn.classList.remove('btn-loading');
+          btn.disabled = false;
+        }
+      } else {
+        // Cash on Delivery
+        try {
+          const order = await API.placeOrder({ customerName: name, email, phone, address });
+          this._showConfirmation(order, total);
+        } catch (err) {
+          Toast.show('Failed to place order. Please try again.', 'error');
+          btn.classList.remove('btn-loading');
+          btn.disabled = false;
+        }
       }
     });
   },
