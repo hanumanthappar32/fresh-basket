@@ -38,6 +38,7 @@ const Order = {
       paymentMethod: paymentInfo.paymentMethod || 'cod',
       paymentId: paymentInfo.paymentId || '',
       razorpayOrderId: paymentInfo.razorpayOrderId || '',
+      merchantId: paymentInfo.merchantId || '',
     };
 
     if (useDB()) {
@@ -55,12 +56,16 @@ const Order = {
     return orderData;
   },
 
-  async getOrders() {
+  async getOrders(merchantId) {
     if (useDB()) {
-      const docs = await OrderSchema.find().sort({ createdAt: -1 }).lean();
+      const filter = merchantId ? { merchantId } : {};
+      const docs = await OrderSchema.find(filter).sort({ createdAt: -1 }).lean();
       return docs.map((d) => ({ ...d, id: d.orderId, _id: undefined, __v: undefined }));
     }
-    return [...memOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const filtered = merchantId 
+      ? memOrders.filter((o) => o.merchantId === merchantId)
+      : memOrders;
+    return [...filtered].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   },
 
   async getById(id) {

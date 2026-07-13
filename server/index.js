@@ -10,6 +10,7 @@ const cartRouter = require('./routes/cart');
 const ordersRouter = require('./routes/orders');
 const settingsRouter = require('./routes/settings');
 const paymentsRouter = require('./routes/payments');
+const merchantRouter = require('./routes/merchant');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,6 +33,7 @@ app.use('/api/cart', cartRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/admin/settings', settingsRouter);
 app.use('/api/payments', paymentsRouter);
+app.use('/api/merchant', merchantRouter);
 
 // ---------------------------------------------------------------------------
 // Admin Auth (password from environment variable)

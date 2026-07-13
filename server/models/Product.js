@@ -53,10 +53,14 @@ function normalize(doc) {
 }
 
 const Product = {
-  async getAll() {
+  async getAll(merchantId) {
     if (useDB()) {
-      const docs = await ProductSchema.find().lean();
+      const filter = merchantId ? { merchantId } : {};
+      const docs = await ProductSchema.find(filter).lean();
       return docs.map((d) => ({ ...d, id: d.productId, _id: undefined, __v: undefined }));
+    }
+    if (merchantId) {
+      return memProducts.filter((p) => (p.merchantId || 'default-merchant') === merchantId);
     }
     return memProducts;
   },
@@ -69,37 +73,50 @@ const Product = {
     return memProducts.find((p) => p.id === id);
   },
 
-  async getByCategory(category) {
+  async getByCategory(category, merchantId) {
     const lower = category.toLowerCase();
     if (useDB()) {
-      const docs = await ProductSchema.find({ category: new RegExp(`^${lower}$`, 'i') }).lean();
-      return docs.map((d) => ({ ...d, id: d.productId, _id: undefined, __v: undefined }));
-    }
-    return memProducts.filter((p) => p.category.toLowerCase() === lower);
-  },
-
-  async search(query) {
-    const lower = query.toLowerCase();
-    if (useDB()) {
-      const regex = new RegExp(query, 'i');
-      const docs = await ProductSchema.find({
-        $or: [{ name: regex }, { description: regex }],
-      }).lean();
+      const filter = { category: new RegExp(`^${lower}$`, 'i') };
+      if (merchantId) filter.merchantId = merchantId;
+      const docs = await ProductSchema.find(filter).lean();
       return docs.map((d) => ({ ...d, id: d.productId, _id: undefined, __v: undefined }));
     }
     return memProducts.filter(
-      (p) => p.name.toLowerCase().includes(lower) || p.description.toLowerCase().includes(lower)
+      (p) => p.category.toLowerCase() === lower && (!merchantId || (p.merchantId || 'default-merchant') === merchantId)
     );
   },
 
-  async getCategories() {
+  async search(query, merchantId) {
+    const lower = query.toLowerCase();
     if (useDB()) {
-      return await ProductSchema.distinct('category');
+      const regex = new RegExp(query, 'i');
+      const filter = {
+        $or: [{ name: regex }, { description: regex }],
+      };
+      if (merchantId) filter.merchantId = merchantId;
+      const docs = await ProductSchema.find(filter).lean();
+      return docs.map((d) => ({ ...d, id: d.productId, _id: undefined, __v: undefined }));
     }
-    return [...new Set(memProducts.map((p) => p.category))];
+    return memProducts.filter(
+      (p) => 
+        (p.name.toLowerCase().includes(lower) || p.description.toLowerCase().includes(lower)) && 
+        (!merchantId || (p.merchantId || 'default-merchant') === merchantId)
+    );
   },
 
-  async create(data) {
+  async getCategories(merchantId) {
+    if (useDB()) {
+      const filter = merchantId ? { merchantId } : {};
+      return await ProductSchema.distinct('category', filter);
+    }
+    const list = merchantId 
+      ? memProducts.filter((p) => (p.merchantId || 'default-merchant') === merchantId)
+      : memProducts;
+    return [...new Set(list.map((p) => p.category))];
+  },
+
+  async create(data, merchantId) {
+    const mId = merchantId || 'default-merchant';
     if (useDB()) {
       const productId = await nextIdDB();
       const doc = await ProductSchema.create({
@@ -112,6 +129,7 @@ const Product = {
         description: data.description || '',
         inStock: data.inStock !== undefined ? data.inStock : true,
         rating: parseFloat(data.rating) || 4.0,
+        merchantId: mId,
       });
       return normalize(doc);
     }
@@ -125,14 +143,18 @@ const Product = {
       description: data.description || '',
       inStock: data.inStock !== undefined ? data.inStock : true,
       rating: parseFloat(data.rating) || 4.0,
+      merchantId: mId,
     };
     memProducts.push(product);
     save();
     return product;
   },
 
-  async update(id, data) {
+  async update(id, data, merchantId) {
     if (useDB()) {
+      const filter = { productId: id };
+      if (merchantId) filter.merchantId = merchantId;
+
       const allowed = ['name', 'category', 'price', 'unit', 'image', 'description', 'inStock', 'rating'];
       const update = {};
       allowed.forEach((key) => {
@@ -142,10 +164,10 @@ const Product = {
           else update[key] = data[key];
         }
       });
-      const doc = await ProductSchema.findOneAndUpdate({ productId: id }, update, { new: true });
+      const doc = await ProductSchema.findOneAndUpdate(filter, update, { new: true });
       return doc ? normalize(doc) : null;
     }
-    const index = memProducts.findIndex((p) => p.id === id);
+    const index = memProducts.findIndex((p) => p.id === id && (!merchantId || (p.merchantId || 'default-merchant') === merchantId));
     if (index === -1) return null;
     const allowed = ['name', 'category', 'price', 'unit', 'image', 'description', 'inStock', 'rating'];
     allowed.forEach((key) => {
@@ -159,12 +181,14 @@ const Product = {
     return memProducts[index];
   },
 
-  async delete(id) {
+  async delete(id, merchantId) {
     if (useDB()) {
-      const result = await ProductSchema.deleteOne({ productId: id });
+      const filter = { productId: id };
+      if (merchantId) filter.merchantId = merchantId;
+      const result = await ProductSchema.deleteOne(filter);
       return result.deletedCount > 0;
     }
-    const index = memProducts.findIndex((p) => p.id === id);
+    const index = memProducts.findIndex((p) => p.id === id && (!merchantId || (p.merchantId || 'default-merchant') === merchantId));
     if (index === -1) return false;
     memProducts.splice(index, 1);
     save();

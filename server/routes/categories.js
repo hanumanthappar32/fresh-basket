@@ -7,7 +7,9 @@ const Product = require('../models/Product');
  */
 router.get('/', async (req, res) => {
   try {
-    const categories = await Product.getCategories();
+    const { storeId } = req.query;
+    const merchantId = storeId || req.headers['x-merchant-id'];
+    const categories = await Product.getCategories(merchantId);
     res.json({ success: true, data: categories });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

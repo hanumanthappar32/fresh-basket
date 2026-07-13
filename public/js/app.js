@@ -9,9 +9,10 @@
     '/': HomePage,
     '/cart': CartPage,
     '/checkout': CheckoutPage,
-    '/admin': AdminPage,
-    '/admin/orders': AdminOrdersPage,
-    '/admin/settings': AdminSettingsPage,
+    '/merchant/login': MerchantAuthPage,
+    '/merchant/dashboard': MerchantDashboardPage,
+    '/merchant/orders': MerchantOrdersPage,
+    '/merchant/settings': MerchantSettingsPage,
   };
 
   /* ── Navigate Helper ───────────────────────────── */
@@ -31,8 +32,15 @@
     content.innerHTML = '';
     content.classList.remove('fade-in');
 
-    // Find matching page
-    const page = routes[path];
+    // Parse route and detect dynamic store ID query parameter
+    let page;
+    if (path.startsWith('/store')) {
+      page = StorePage;
+      const urlParams = new URLSearchParams(path.split('?')[1] || '');
+      window.currentStoreId = urlParams.get('id');
+    } else {
+      page = routes[path];
+    }
 
     if (page && typeof page.render === 'function') {
       // Force reflow before adding class for animation

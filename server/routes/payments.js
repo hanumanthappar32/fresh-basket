@@ -2,17 +2,21 @@ const express = require('express');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const router = express.Router();
-const Settings = require('../models/Settings');
+const Merchant = require('../models/Merchant');
 const Order = require('../models/Order');
 const Cart = require('../models/Cart');
 
 /**
  * GET /api/payments/config
- * Public — tells the frontend which payment options are available.
+ * Public — tells the frontend which payment options are available for a given store.
  */
 router.get('/config', async (req, res) => {
   try {
-    const settings = await Settings.getRawSettings();
+    const { storeId } = req.query;
+    if (!storeId) {
+      return res.status(400).json({ success: false, error: 'Store ID is required' });
+    }
+    const settings = await Merchant.getRawSettings(storeId);
     const razorpayEnabled = !!(settings.razorpayKeyId && settings.razorpayKeySecret);
     res.json({
       success: true,
@@ -33,9 +37,13 @@ router.get('/config', async (req, res) => {
  */
 router.post('/create-order', async (req, res) => {
   try {
-    const settings = await Settings.getRawSettings();
+    const { storeId } = req.query;
+    if (!storeId) {
+      return res.status(400).json({ success: false, error: 'Store ID is required' });
+    }
+    const settings = await Merchant.getRawSettings(storeId);
     if (!settings.razorpayKeyId || !settings.razorpayKeySecret) {
-      return res.status(400).json({ success: false, error: 'Razorpay is not configured. Please set up credentials in Admin Settings.' });
+      return res.status(400).json({ success: false, error: 'Razorpay is not configured for this store.' });
     }
 
     const cartResponse = await Cart.getCartResponse();
@@ -82,7 +90,12 @@ router.post('/verify', async (req, res) => {
       razorpay_payment_id,
       razorpay_signature,
       customerName, email, phone, address,
+      storeId,
     } = req.body;
+
+    if (!storeId) {
+      return res.status(400).json({ success: false, error: 'Store ID is required' });
+    }
 
     // Validate Razorpay fields
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -98,9 +111,9 @@ router.post('/verify', async (req, res) => {
     }
 
     // Get secret for verification
-    const settings = await Settings.getRawSettings();
+    const settings = await Merchant.getRawSettings(storeId);
     if (!settings.razorpayKeySecret) {
-      return res.status(400).json({ success: false, error: 'Razorpay is not configured' });
+      return res.status(400).json({ success: false, error: 'Razorpay is not configured for this store' });
     }
 
     // Verify signature
@@ -132,6 +145,7 @@ router.post('/verify', async (req, res) => {
       paymentMethod: 'razorpay',
       paymentId: razorpay_payment_id,
       razorpayOrderId: razorpay_order_id,
+      merchantId: storeId,
     });
 
     // Clear the cart

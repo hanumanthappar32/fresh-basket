@@ -11,9 +11,13 @@ window.API = (function () {
       headers: { 'Content-Type': 'application/json' },
     };
     const config = { ...defaults, ...options };
-    if (options.headers) {
-      config.headers = { ...defaults.headers, ...options.headers };
+    config.headers = { ...defaults.headers, ...options.headers };
+    
+    const merchantId = localStorage.getItem('merchantId');
+    if (merchantId) {
+      config.headers['X-Merchant-Id'] = merchantId;
     }
+
     try {
       const res = await fetch(url, config);
       const json = await res.json().catch(() => ({ success: false, error: res.statusText }));
@@ -29,10 +33,11 @@ window.API = (function () {
   }
 
   /* ── Products ─────────────────────────────────── */
-  function getProducts(category, search) {
+  function getProducts(category, search, storeId) {
     const params = new URLSearchParams();
     if (category && category !== 'All') params.append('category', category);
     if (search) params.append('search', search);
+    if (storeId) params.append('storeId', storeId);
     const qs = params.toString();
     return request(`/products${qs ? '?' + qs : ''}`);
   }
@@ -41,8 +46,9 @@ window.API = (function () {
     return request(`/products/${id}`);
   }
 
-  function getCategories() {
-    return request('/categories');
+  function getCategories(storeId) {
+    const qs = storeId ? `?storeId=${storeId}` : '';
+    return request(`/categories${qs}`);
   }
 
   /* ── Cart ──────────────────────────────────────── */
@@ -96,12 +102,14 @@ window.API = (function () {
   }
 
   /* ── Payments & Settings ────────────────────────── */
-  function getPaymentConfig() {
-    return request('/payments/config');
+  function getPaymentConfig(storeId) {
+    const qs = storeId ? `?storeId=${storeId}` : '';
+    return request(`/payments/config${qs}`);
   }
 
-  function createPaymentOrder() {
-    return request('/payments/create-order', {
+  function createPaymentOrder(storeId) {
+    const qs = storeId ? `?storeId=${storeId}` : '';
+    return request(`/payments/create-order${qs}`, {
       method: 'POST',
     });
   }
@@ -145,6 +153,29 @@ window.API = (function () {
     });
   }
 
+  /* ── Merchant Auth & Stores ─────────────────────── */
+  function registerMerchant(merchantData) {
+    return request('/merchant/register', {
+      method: 'POST',
+      body: JSON.stringify(merchantData),
+    });
+  }
+
+  function loginMerchant(credentials) {
+    return request('/merchant/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  }
+
+  function listStores() {
+    return request('/merchant/list');
+  }
+
+  function getStore(storeId) {
+    return request(`/merchant/store/${storeId}`);
+  }
+
   /* ── Public API ────────────────────────────────── */
   return {
     getProducts,
@@ -166,5 +197,9 @@ window.API = (function () {
     createProduct,
     updateProduct,
     deleteProduct,
+    registerMerchant,
+    loginMerchant,
+    listStores,
+    getStore,
   };
 })();

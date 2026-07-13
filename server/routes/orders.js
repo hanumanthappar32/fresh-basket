@@ -8,7 +8,11 @@ const Cart = require('../models/Cart');
  */
 router.get('/', async (req, res) => {
   try {
-    const orders = await Order.getOrders();
+    const merchantId = req.headers['x-merchant-id'];
+    if (!merchantId) {
+      return res.status(400).json({ success: false, error: 'Merchant ID header is required' });
+    }
+    const orders = await Order.getOrders(merchantId);
     res.json({ success: true, data: orders, count: orders.length });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -32,11 +36,15 @@ router.get('/:id', async (req, res) => {
 
 /**
  * POST /api/orders
- * Body: { customerName, email, phone, address }
+ * Body: { customerName, email, phone, address, storeId }
  */
 router.post('/', async (req, res) => {
   try {
-    const { customerName, email, phone, address } = req.body;
+    const { customerName, email, phone, address, storeId } = req.body;
+
+    if (!storeId) {
+      return res.status(400).json({ success: false, error: 'Store ID is required' });
+    }
 
     if (!customerName || !email || !phone || !address) {
       return res.status(400).json({
@@ -54,7 +62,7 @@ router.post('/', async (req, res) => {
 
     const order = await Order.createOrder(cartResponse.items, totals, {
       customerName, email, phone, address,
-    }, { paymentMethod: 'cod' });
+    }, { paymentMethod: 'cod', merchantId: storeId });
 
     // Clear the cart after order is placed
     await Cart.clearCart();

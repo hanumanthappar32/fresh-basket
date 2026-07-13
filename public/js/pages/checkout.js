@@ -28,8 +28,17 @@ window.CheckoutPage = {
       const delivery = subtotal >= 500 ? 0 : 49;
       const total = subtotal + delivery;
 
+      // Extract storeId from the active cart items if global currentStoreId is reset
+      const storeId = window.currentStoreId || (items[0] && items[0].product && items[0].product.merchantId);
+      if (!storeId) {
+        Toast.show('Store information is missing. Redirecting home...', 'error');
+        window.navigateTo('#/');
+        return;
+      }
+      window.currentStoreId = storeId;
+
       // Get payment gateway configuration
-      const config = await API.getPaymentConfig();
+      const config = await API.getPaymentConfig(storeId);
       const razorpayEnabled = config.razorpayEnabled;
       const codEnabled = config.codEnabled !== false;
 
@@ -130,7 +139,7 @@ window.CheckoutPage = {
         </div>
       `;
 
-      this._bindEvents(content, total);
+      this._bindEvents(content, total, storeId);
     } catch (e) {
       console.error('Checkout render failed:', e);
       Toast.show('Failed to load checkout', 'error');
@@ -141,7 +150,7 @@ window.CheckoutPage = {
   /**
    * Bind form events.
    */
-  _bindEvents(content, total) {
+  _bindEvents(content, total, storeId) {
     const form = document.getElementById('checkout-form');
     if (!form) return;
 
@@ -249,7 +258,7 @@ window.CheckoutPage = {
 
       if (paymentMethod === 'razorpay') {
         try {
-          const payOrder = await API.createPaymentOrder();
+          const payOrder = await API.createPaymentOrder(storeId);
           
           const options = {
             key: payOrder.keyId,
@@ -267,7 +276,8 @@ window.CheckoutPage = {
                   customerName: name,
                   email: email,
                   phone: phone,
-                  address: address
+                  address: address,
+                  storeId: storeId,
                 });
                 this._showConfirmation(order, total);
               } catch (err) {
@@ -304,9 +314,10 @@ window.CheckoutPage = {
       } else {
         // Cash on Delivery
         try {
-          const order = await API.placeOrder({ customerName: name, email, phone, address });
+          const order = await API.placeOrder({ customerName: name, email, phone, address, storeId });
           this._showConfirmation(order, total);
         } catch (err) {
+          console.error(err);
           Toast.show('Failed to place order. Please try again.', 'error');
           btn.classList.remove('btn-loading');
           btn.disabled = false;
