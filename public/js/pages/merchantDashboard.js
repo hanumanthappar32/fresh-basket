@@ -137,8 +137,11 @@ window.MerchantDashboardPage = {
     const title = isEdit ? 'Edit Product' : 'Add New Product';
     const btnText = isEdit ? 'Save Changes' : 'Create Product';
 
-    const categories = ['Fruits', 'Vegetables', 'Dairy', 'Bakery', 'Beverages', 'Snacks', 'Pantry', 'Frozen'];
-    const emojis = ['🍎','🍌','🍊','🍇','🥑','🍓','🫐','🥬','🍅','🥕','🫑','🥦','🌽','🥛','🥣','🧀','🥚','🧈','🍞','🥐','🥯','🧁','🫓','🧃','💧','☕','🍵','🥜','🍫','🌮','🥭','🫒','🍚','🍝','🥫','🍯','🫘','🍕','🍦','🫐','🍗','🧇','📦'];
+    const standardCats = ['Fruits', 'Vegetables', 'Dairy', 'Bakery', 'Beverages', 'Snacks', 'Pantry', 'Frozen'];
+    const currentCats = [...new Set(this._products.map((p) => p.category))];
+    const allCats = [...new Set([...standardCats, ...currentCats])];
+    
+    const emojis = ['🍎','🍌','🍊','🍇','🥑','🍓','🫐','🥬','🍅','🥕','🫑','🥦','🌽','🥛','🥣','🧀','🥚','🧈','🍞','🥐','🥯','🧁','🫓','🧃','💧','☕','🍵','🥜','🍫','🌮','🥭','🫒','🍚','🍝','🥫','🍯','🫘','🍕','🍦','🥩','🍗','🐟','🧇','📦'];
 
     container.innerHTML = `
       <div class="admin-form-card">
@@ -155,8 +158,13 @@ window.MerchantDashboardPage = {
             <div class="form-group">
               <label for="pf-category">Category *</label>
               <select id="pf-category" style="width:100%;padding:14px 16px;background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--text-primary);font-size:0.9rem;outline:none;">
-                ${categories.map((c) => `<option value="${c}" ${isEdit && product.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+                ${allCats.map((c) => `<option value="${c}" ${isEdit && product.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+                <option value="__custom__">+ Add Custom Category...</option>
               </select>
+              <div id="custom-category-group" style="display:none; margin-top:12px;">
+                <label for="pf-custom-category" style="font-size:0.85rem; margin-bottom:4px; display:block;">Custom Category Name *</label>
+                <input type="text" id="pf-custom-category" placeholder="e.g. Meat & Seafood" style="width:100%;padding:10px 12px;background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--text-primary);font-size:0.9rem;">
+              </div>
             </div>
             <div class="form-group">
               <label for="pf-price">Price (₹) *</label>
@@ -263,13 +271,41 @@ window.MerchantDashboardPage = {
       }
     });
 
+    // Custom category toggle
+    wrapper.addEventListener('change', (e) => {
+      if (e.target.id === 'pf-category') {
+        const customGroup = document.getElementById('custom-category-group');
+        const customInput = document.getElementById('pf-custom-category');
+        if (e.target.value === '__custom__') {
+          if (customGroup) customGroup.style.display = 'block';
+          if (customInput) customInput.required = true;
+        } else {
+          if (customGroup) customGroup.style.display = 'none';
+          if (customInput) {
+            customInput.required = false;
+            customInput.value = '';
+          }
+        }
+      }
+    });
+
     // Form submit
     wrapper.addEventListener('submit', async (e) => {
       if (e.target.id === 'product-form') {
         e.preventDefault();
+
+        const catSelect = document.getElementById('pf-category').value;
+        const customCat = document.getElementById('pf-custom-category').value.trim();
+        const category = catSelect === '__custom__' ? customCat : catSelect;
+
+        if (!category) {
+          Toast.show('Please select or specify a category', 'error');
+          return;
+        }
+
         const data = {
           name: document.getElementById('pf-name').value.trim(),
-          category: document.getElementById('pf-category').value,
+          category: category,
           price: parseFloat(document.getElementById('pf-price').value),
           unit: document.getElementById('pf-unit').value || 'No.',
           image: document.getElementById('pf-emoji').value.trim() || '📦',
