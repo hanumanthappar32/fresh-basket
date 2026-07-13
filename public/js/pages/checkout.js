@@ -251,6 +251,35 @@ window.CheckoutPage = {
       btn.classList.add('btn-loading');
       btn.disabled = true;
 
+      // Show connecting overlay immediately
+      let connectingOverlay = null;
+      if (paymentMethod === 'razorpay') {
+        connectingOverlay = document.createElement('div');
+        connectingOverlay.style = `
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(10, 12, 18, 0.85);
+          backdrop-filter: blur(8px);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          z-index: 99999;
+        `;
+        connectingOverlay.innerHTML = `
+          <style>
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          </style>
+          <div style="margin-bottom: 20px; border: 4px solid rgba(255,255,255,0.1); border-left-color: var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+          <h3 style="color: #fff; margin-bottom: 8px; font-weight: 600;">Connecting to Secure Payment Gateway</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Please do not refresh this page or click back.</p>
+        `;
+        document.body.appendChild(connectingOverlay);
+      }
+
       if (paymentMethod === 'razorpay') {
         try {
           const payOrder = await API.createPaymentOrder(storeId);
@@ -263,6 +292,19 @@ window.CheckoutPage = {
             description: "Grocery Order Payment",
             order_id: payOrder.razorpayOrderId,
             handler: async (response) => {
+              if (connectingOverlay) {
+                connectingOverlay.innerHTML = `
+                  <style>
+                    @keyframes spin {
+                      0% { transform: rotate(0deg); }
+                      100% { transform: rotate(360deg); }
+                    }
+                  </style>
+                  <div style="margin-bottom: 20px; border: 4px solid rgba(255,255,255,0.1); border-left-color: var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+                  <h3 style="color: #fff; margin-bottom: 8px; font-weight: 600;">Verifying Payment Transaction...</h3>
+                  <p style="color: var(--text-secondary); font-size: 0.9rem;">Securing your order database records.</p>
+                `;
+              }
               try {
                 const order = await API.verifyPayment({
                   razorpay_order_id: response.razorpay_order_id,
@@ -274,9 +316,11 @@ window.CheckoutPage = {
                   address: address,
                   storeId: storeId,
                 });
+                if (connectingOverlay) connectingOverlay.remove();
                 this._showConfirmation(order, total);
               } catch (err) {
                 console.error(err);
+                if (connectingOverlay) connectingOverlay.remove();
                 Toast.show('Payment verification failed. Please contact support.', 'error');
                 btn.classList.remove('btn-loading');
                 btn.disabled = false;
@@ -292,6 +336,7 @@ window.CheckoutPage = {
             },
             modal: {
               ondismiss: () => {
+                if (connectingOverlay) connectingOverlay.remove();
                 btn.classList.remove('btn-loading');
                 btn.disabled = false;
               }
@@ -302,6 +347,7 @@ window.CheckoutPage = {
           rzp.open();
         } catch (err) {
           console.error(err);
+          if (connectingOverlay) connectingOverlay.remove();
           Toast.show(err.message || 'Failed to initiate payment. Please try again.', 'error');
           btn.classList.remove('btn-loading');
           btn.disabled = false;
