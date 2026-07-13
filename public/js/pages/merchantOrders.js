@@ -23,7 +23,7 @@ window.MerchantOrdersPage = {
         <div class="container">
           <div class="admin-tabs">
             <button class="admin-tab" data-tab="products" onclick="window.navigateTo('#/merchant/dashboard')">🔧 Products</button>
-            <button class="admin-tab active" data-tab="orders">📦 Orders</button>
+            <button class="admin-tab active" data-tab="orders">📦 Order Management</button>
             <button class="admin-tab" data-tab="settings" onclick="window.navigateTo('#/merchant/settings')">⚙️ Settings</button>
           </div>
           <div class="admin-header">

@@ -13,6 +13,9 @@
     '/merchant/dashboard': MerchantDashboardPage,
     '/merchant/orders': MerchantOrdersPage,
     '/merchant/settings': MerchantSettingsPage,
+    '/admin': AdminPage,
+    '/admin/orders': AdminOrdersPage,
+    '/admin/settings': AdminSettingsPage,
   };
 
   /* ── Navigate Helper ───────────────────────────── */
