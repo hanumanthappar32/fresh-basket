@@ -19,7 +19,7 @@ window.MerchantOrdersPage = {
     }
 
     content.innerHTML = `
-      <div class="admin-page">
+      <div class="admin-page" id="merchant-orders-wrapper">
         <div class="container">
           <div class="admin-tabs">
             <button class="admin-tab" data-tab="products" onclick="window.navigateTo('#/merchant/dashboard')">🔧 Products</button>
@@ -52,7 +52,7 @@ window.MerchantOrdersPage = {
     `;
 
     await this._loadOrders();
-    this._bindEvents(content);
+    this._bindEvents();
   },
 
   /**
@@ -64,7 +64,6 @@ window.MerchantOrdersPage = {
     if (!container) return;
 
     try {
-      // getOrders automatically sends the merchant id header
       const orders = await API.getOrders();
       this._orders = orders || [];
 
@@ -257,10 +256,13 @@ window.MerchantOrdersPage = {
   /**
    * Bind events.
    */
-  _bindEvents(content) {
+  _bindEvents() {
+    const wrapper = document.getElementById('merchant-orders-wrapper');
+    if (!wrapper) return;
+
     let activeFilter = 'all';
 
-    content.addEventListener('click', async (e) => {
+    wrapper.addEventListener('click', async (e) => {
       // Refresh button
       if (e.target.id === 'refresh-orders-btn' || e.target.closest('#refresh-orders-btn')) {
         const btn = document.getElementById('refresh-orders-btn');
@@ -283,7 +285,7 @@ window.MerchantOrdersPage = {
     });
 
     // Status change
-    content.addEventListener('change', async (e) => {
+    wrapper.addEventListener('change', async (e) => {
       if (e.target.classList.contains('order-status-select')) {
         const orderId = e.target.dataset.orderId;
         const newStatus = e.target.value;

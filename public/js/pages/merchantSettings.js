@@ -19,7 +19,7 @@ window.MerchantSettingsPage = {
     }
 
     content.innerHTML = `
-      <div class="admin-page">
+      <div class="admin-page" id="merchant-settings-wrapper">
         <div class="container">
           <div class="admin-tabs">
             <button class="admin-tab" data-tab="products" onclick="window.navigateTo('#/merchant/dashboard')">🔧 Products</button>
@@ -127,7 +127,10 @@ window.MerchantSettingsPage = {
    * Bind event listeners to the form.
    */
   _bindEvents() {
-    const form = document.getElementById('settings-form');
+    const wrapper = document.getElementById('merchant-settings-wrapper');
+    if (!wrapper) return;
+
+    const form = wrapper.querySelector('#settings-form');
     if (!form) return;
 
     form.addEventListener('submit', async (e) => {

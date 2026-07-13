@@ -19,7 +19,7 @@ window.MerchantDashboardPage = {
     }
 
     content.innerHTML = `
-      <div class="admin-page">
+      <div class="admin-page" id="merchant-dashboard-wrapper">
         <div class="container">
           <div class="admin-tabs">
             <button class="admin-tab active" data-tab="products">🔧 Products</button>
@@ -48,7 +48,7 @@ window.MerchantDashboardPage = {
     `;
 
     await this._loadProducts();
-    this._bindEvents(content);
+    this._bindEvents();
   },
 
   /**
@@ -61,7 +61,6 @@ window.MerchantDashboardPage = {
     const merchantId = localStorage.getItem('merchantId');
 
     try {
-      // Pass storeId to getProducts to list only this merchant's inventory
       const products = await API.getProducts(undefined, searchQuery, merchantId);
       this._products = products || [];
 
@@ -208,10 +207,13 @@ window.MerchantDashboardPage = {
     this._editingId = null;
   },
 
-  _bindEvents(content) {
+  _bindEvents() {
+    const wrapper = document.getElementById('merchant-dashboard-wrapper');
+    if (!wrapper) return;
+
     let searchTimer = null;
 
-    content.addEventListener('click', async (e) => {
+    wrapper.addEventListener('click', async (e) => {
       // Add Product button
       if (e.target.id === 'add-product-btn' || e.target.closest('#add-product-btn')) {
         this._showForm(null);
@@ -262,7 +264,7 @@ window.MerchantDashboardPage = {
     });
 
     // Form submit
-    content.addEventListener('submit', async (e) => {
+    wrapper.addEventListener('submit', async (e) => {
       if (e.target.id === 'product-form') {
         e.preventDefault();
         const data = {
@@ -293,7 +295,7 @@ window.MerchantDashboardPage = {
     });
 
     // Search
-    content.addEventListener('input', (e) => {
+    wrapper.addEventListener('input', (e) => {
       if (e.target.id === 'admin-search') {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
