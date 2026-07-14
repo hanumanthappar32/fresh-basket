@@ -5,6 +5,7 @@ const router = express.Router();
 const Merchant = require('../models/Merchant');
 const Order = require('../models/Order');
 const Cart = require('../models/Cart');
+const EmailService = require('../services/emailService');
 
 /**
  * GET /api/payments/config
@@ -142,6 +143,15 @@ router.post('/verify', async (req, res) => {
 
     // Clear the cart
     await Cart.clearCart();
+
+    // Dispatch order confirmation email asynchronously
+    Merchant.getById(actualStoreId)
+      .then((merchant) => {
+        EmailService.sendOrderConfirmation(order, merchant);
+      })
+      .catch((err) => {
+        console.error('[PaymentsRoute] Failed to load merchant info for confirmation email:', err);
+      });
 
     res.status(201).json({ success: true, data: order });
   } catch (err) {
